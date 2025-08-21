@@ -1,5 +1,9 @@
 'use client';
 import { useState } from 'react';
+import Guard from '@/app/guard';
+import Section from '@/components/Section';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 
 export default function SurfUpload() {
   const [file, setFile] = useState<File | null>(null);
@@ -16,11 +20,14 @@ export default function SurfUpload() {
   }
 
   return (
-    <main>
-      <h2>Upload SURF (HTML)</h2>
-      <input type="file" accept=".html,text/html" onChange={e=>setFile(e.target.files?.[0] || null)}/>
-      <button onClick={upload} style={{marginLeft:8}}>Upload</button>
-      {resp && <pre style={{marginTop:12, background:'#111', color:'#0f0', padding:12}}>{JSON.stringify(resp, null, 2)}</pre>}
-    </main>
+    <Guard allow={["member", "supervisor", "commander"]}>
+      <Section title="SURF Upload" description="Upload your SURF HTML file to auto-populate skills and experience.">
+        <div className="flex items-center gap-3">
+          <Input type="file" accept=".html,text/html" onChange={e=>setFile((e.target as HTMLInputElement).files?.[0] || null)}/>
+          <Button onClick={upload}>Upload</Button>
+        </div>
+        {resp && <pre className="mt-4 bg-slate-900 text-green-300 p-3 rounded-md overflow-auto">{JSON.stringify(resp, null, 2)}</pre>}
+      </Section>
+    </Guard>
   );
 }

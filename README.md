@@ -19,6 +19,16 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - PowerShell: `./dev.ps1` (or `./dev.ps1 -Detach`)
 - Bash: `./dev.sh`
 
+## Authentication & Roles
+- Seed demo users: `curl -X POST http://localhost:8000/auth/seed-demo`
+- Login at frontend `http://localhost:3000/login` or via API:
+  - `POST /auth/login` with `{ "username": "member1", "password": "member" }`
+  - Roles: `member`, `supervisor`, `commander`
+- Access rules:
+  - Member: can submit member survey
+  - Supervisor: can submit supervisor survey and create roles
+  - Commander: can run matching
+
 ## Dev (no Docker)
 - Backend: `cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload`
 - Frontend: `cd frontend && npm i && npm run dev`

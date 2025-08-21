@@ -5,6 +5,7 @@ from app.core.db import get_db
 from app.core.schema import RoleIn, Course
 from app.models.base import Role, RoleRequirement
 from app.core.training import load_courses
+from app.core.auth import require_roles
 
 router = APIRouter()
 
@@ -17,7 +18,7 @@ def get_courses():
 def get_training_catalog():
     return load_courses()
 
-@router.post("/roles")
+@router.post("/roles", dependencies=[Depends(require_roles("supervisor", "commander"))])
 def create_role(role: RoleIn, db: Session = Depends(get_db)):
     r = Role(
         unit=role.unit, title=role.title, min_grade=role.min_grade,

@@ -5,6 +5,7 @@ from app.api.ingest import router as ingest_router
 from app.api.catalog import router as catalog_router
 from app.api.match import router as match_router
 from app.api.explain import router as explain_router
+from app.api.auth import router as auth_router
 
 app = FastAPI(title="MOSaic POC", version="0.1.0")
 
@@ -25,3 +26,4 @@ app.include_router(ingest_router, prefix="/ingest", tags=["ingest"])
 app.include_router(catalog_router, prefix="/catalog", tags=["catalog"])
 app.include_router(match_router, prefix="/match", tags=["match"])
 app.include_router(explain_router, prefix="/ai", tags=["ai"])
+app.include_router(auth_router, prefix="/auth", tags=["auth"])

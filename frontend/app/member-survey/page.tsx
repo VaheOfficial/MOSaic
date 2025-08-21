@@ -1,180 +1,474 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-
-type Course = { id: string; provider: string; title: string; url: string; skills: string[] };
+import Guard from '@/app/guard';
+import TagInput from '@/components/TagInput';
+import Input from '@/components/ui/Input';
+import Label from '@/components/ui/Label';
+import Textarea from '@/components/ui/Textarea';
+import Select from '@/components/ui/Select';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import { User, Award, Target, Settings } from 'lucide-react';
 
 export default function MemberSurvey() {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [existingProfileId, setExistingProfileId] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Personal Information
   const [fullName, setFullName] = useState('');
-  const [grade, setGrade] = useState('');
-  const [unit, setUnit] = useState('Delta6Det4');
-  const [dutyTitle, setDutyTitle] = useState('');
+  const [rank, setRank] = useState('');
+  const [unit, setUnit] = useState('');
+  const [dutyPosition, setDutyPosition] = useState('');
+  const [yearsService, setYearsService] = useState('');
+  const [clearanceLevel, setClearanceLevel] = useState('');
 
-  const [primarySkills, setPrimarySkills] = useState('red teaming, recon');
-  const [secondarySkills, setSecondarySkills] = useState('linux, python');
-  const [yearsBySkill, setYearsBySkill] = useState('red teaming:2; recon:1');
-  const [tools, setTools] = useState('Burp Suite, Nmap, Wireshark');
-  const [certs, setCerts] = useState('Security+, OSCP');
-  const [trainingInProgress, setTrainingInProgress] = useState('OSCP:40; SANS 504:20');
-  const [interestedRoles, setInterestedRoles] = useState('Red Team Member, Threat Hunter');
-  const [avoidRoles, setAvoidRoles] = useState('');
-  const [prefTechLeadership, setPrefTechLeadership] = useState(3);
-  const [prefOpsTraining, setPrefOpsTraining] = useState(3);
-  const [willingPCS, setWillingPCS] = useState<'Yes'|'No'|'Later'>('Later');
-  const [willingCrossCF, setWillingCrossCF] = useState<'Yes'|'No'>('Yes');
-  const [timeConstraints, setTimeConstraints] = useState('');
-  const [clearance, setClearance] = useState('Secret');
-  const [freeText, setFreeText] = useState('I like red teaming, recon, linux, python.');
-  const [learningGoals, setLearningGoals] = useState('Get better at opsec and reporting.');
-  const [consent, setConsent] = useState(false);
-  const [trainingReady, setTrainingReady] = useState(50);
+  // Skills & Experience  
+  const [primarySkills, setPrimarySkills] = useState<string[]>([]);
+  const [certifications, setCertifications] = useState<string[]>([]);
+  const [specialtyAreas, setSpecialtyAreas] = useState<string[]>([]);
+  const [tools, setTools] = useState<string[]>([]);
+  const [experience, setExperience] = useState('');
 
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  // Career Preferences
+  const [careerGoals, setCareerGoals] = useState('');
+  const [preferredRoles, setPreferredRoles] = useState<string[]>([]);
+  const [avoidRoles, setAvoidRoles] = useState<string[]>([]);
+  const [willingToRelocate, setWillingToRelocate] = useState<'Yes' | 'No' | 'Maybe'>('Maybe');
+  const [deploymentAvailability, setDeploymentAvailability] = useState<'Available' | 'Limited' | 'Not Available'>('Available');
 
+  // Additional Information
+  const [languageSkills, setLanguageSkills] = useState<string[]>([]);
+  const [additionalInfo, setAdditionalInfo] = useState('');
+
+  // Load existing profile on mount
   useEffect(() => {
-    (async () => {
+    async function loadExistingProfile() {
       try {
-        const data: Course[] = await api('/catalog/training');
-        setCourses(data);
-      } catch {}
-    })();
+        const profile = await api('/member/profile');
+        if (profile && profile.data) {
+          // Load existing data
+          const data = profile.data;
+          setExistingProfileId(profile.id);
+          setFullName(data.identity?.full_name || '');
+          setRank(data.identity?.grade || '');
+          setUnit(data.identity?.unit || '');
+          setDutyPosition(data.identity?.duty_title || '');
+          setYearsService(data.years_service?.toString() || '');
+          setClearanceLevel(data.clearance_level || '');
+          setPrimarySkills(data.primary_skills || []);
+          setCertifications(data.certifications || []);
+          setSpecialtyAreas(data.secondary_skills || []);
+          setTools(data.tools || []);
+          setExperience(data.experience_summary || '');
+          setCareerGoals(data.career_goals || '');
+          setPreferredRoles(data.interested_roles || []);
+          setAvoidRoles(data.avoid_roles || []);
+          setWillingToRelocate(data.willing_pcs || 'Maybe');
+          setDeploymentAvailability(data.deployment_availability || 'Available');
+          setLanguageSkills(data.language_skills || []);
+          setAdditionalInfo(data.additional_info || '');
+        }
+      } catch (error) {
+        // No existing profile found, start fresh
+        console.log('No existing profile found, starting fresh');
+      }
+      setIsLoading(false);
+    }
+    
+    loadExistingProfile();
   }, []);
 
-  const toggleCourse = (id: string) => {
-    setSelectedCourses(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]);
-  };
+  const steps = [
+    {
+      id: 'personal',
+      title: 'Personal Information',
+      icon: <User size={20} />,
+      description: 'Basic military information'
+    },
+    {
+      id: 'skills',
+      title: 'Skills & Experience',
+      icon: <Award size={20} />,
+      description: 'Technical skills and certifications'
+    },
+    {
+      id: 'preferences',
+      title: 'Career Preferences',
+      icon: <Target size={20} />,
+      description: 'Future goals and preferences'
+    },
+    {
+      id: 'additional',
+      title: 'Additional Information',
+      icon: <Settings size={20} />,
+      description: 'Languages and other details'
+    }
+  ];
 
-  const yearsParsed = useMemo(() => Object.fromEntries(yearsBySkill.split(';').map(s=>s.trim()).filter(Boolean).map(pair=>{
-    const [skill, yrs] = pair.split(':').map(x=>x.trim());
-    return [skill, Number(yrs||0)];
-  })), [yearsBySkill]);
+  async function handleSubmit() {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        personal_info: {
+          full_name: fullName,
+          rank: rank,
+          unit: unit,
+          duty_position: dutyPosition,
+          years_service: parseInt(yearsService) || 0,
+          clearance_level: clearanceLevel
+        },
+        skills_experience: {
+          primary_skills: primarySkills,
+          certifications: certifications,
+          specialty_areas: specialtyAreas,
+          tools: tools,
+          experience_summary: experience
+        },
+        career_preferences: {
+          career_goals: careerGoals,
+          preferred_roles: preferredRoles,
+          avoid_roles: avoidRoles,
+          willing_to_relocate: willingToRelocate,
+          deployment_availability: deploymentAvailability
+        },
+        additional_info: {
+          language_skills: languageSkills,
+          additional_information: additionalInfo
+        }
+      };
 
-  async function submit() {
-    const payload = {
-      person_id: null,
-      data: {
-        identity: { full_name: fullName, grade, unit, duty_title: dutyTitle },
-        primary_skills: primarySkills.split(',').map(s=>s.trim()).filter(Boolean),
-        secondary_skills: secondarySkills.split(',').map(s=>s.trim()).filter(Boolean),
-        years_by_skill: yearsParsed,
-        tools: tools.split(',').map(s=>s.trim()).filter(Boolean),
-        certifications: certs.split(',').map(s=>s.trim()).filter(Boolean),
-        training_in_progress: trainingInProgress.split(';').map(s=>s.trim()).filter(Boolean).map(chunk => {
-          const [name, pct] = chunk.split(':').map(x=>x.trim());
-          return { name, pct: Number(pct||0) };
-        }),
-        interested_roles: interestedRoles.split(',').map(s=>s.trim()).slice(0,5),
-        avoid_roles: avoidRoles ? avoidRoles.split(',').map(s=>s.trim()).slice(0,3) : [],
-        preference_tech_vs_leadership: prefTechLeadership,
-        preference_ops_vs_training: prefOpsTraining,
-        willing_pcs: willingPCS,
-        willing_cross_career_field: willingCrossCF,
-        time_constraints: timeConstraints,
-        clearance_level: clearance,
-        self_rated_proficiency: {},
-        learning_goals: learningGoals,
-        desired_courses: selectedCourses,
-        anything_else: freeText,
-        consent: consent,
-        relevant_years: Math.max(...Object.values(yearsParsed).map(Number).concat([0])),
-        training_ready: trainingReady,
-        skills: Array.from(new Set([
-          ...primarySkills.split(',').map(s=>s.trim()),
-          ...secondarySkills.split(',').map(s=>s.trim())
-        ].filter(Boolean)))
+      const method = existingProfileId ? 'PUT' : 'POST';
+      const url = existingProfileId ? `/member/profile/${existingProfileId}` : '/member/profile';
+      
+      await api(url, { method, body: JSON.stringify(payload) });
+      
+      const message = existingProfileId ? 'Profile updated successfully!' : 'Profile submitted successfully!';
+      window.dispatchEvent(new CustomEvent('toast', { 
+        detail: { message, variant: 'success' } 
+      }));
+      
+      if (!existingProfileId) {
+        // After successful creation, switch to edit mode
+        setIsEditMode(true);
       }
-    };
-    await api('/ingest/member-survey', { method: 'POST', body: JSON.stringify(payload) });
-    alert('Submitted');
+      
+    } catch (error: any) {
+      window.dispatchEvent(new CustomEvent('toast', { 
+        detail: { message: 'Failed to submit profile', variant: 'error' } 
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function isStepValid(stepIndex: number) {
+    switch (stepIndex) {
+      case 0:
+        return fullName && rank && unit && dutyPosition;
+      case 1:
+        return primarySkills.length > 0;
+      case 2:
+        return careerGoals.trim().length > 0;
+      case 3:
+        return true; // Optional step
+      default:
+        return false;
+    }
+  }
+
+  function nextStep() {
+    if (currentStep < steps.length - 1 && isStepValid(currentStep)) {
+      setCurrentStep(currentStep + 1);
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <Guard allow={["member", "supervisor", "commander"]}>
+        <div className="max-w-4xl mx-auto">
+          <Card className="p-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+              <p className="mt-4 text-slate-600">Loading your profile...</p>
+            </div>
+          </Card>
+        </div>
+      </Guard>
+    );
   }
 
   return (
-    <main>
-      <h2>Member Survey — Self-Profile & Preferences</h2>
-      <div style={{display:'grid', gap:12}}>
-        <label>Full name <input value={fullName} onChange={e=>setFullName(e.target.value)} style={{width:'100%'}}/></label>
-        <div style={{display:'flex', gap:16}}>
-          <label>Rank/Grade <input value={grade} onChange={e=>setGrade(e.target.value)} /></label>
-          <label>Current unit <input value={unit} onChange={e=>setUnit(e.target.value)} /></label>
-          <label>Duty title <input value={dutyTitle} onChange={e=>setDutyTitle(e.target.value)} /></label>
+    <Guard allow={["member", "supervisor", "commander"]}>
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <h1 className="text-3xl font-bold gradient-text">
+            {existingProfileId ? 'Update Skills Profile' : 'Member Skills Profile'}
+          </h1>
+          <p className="text-slate-600">
+            {existingProfileId 
+              ? 'Update your profile information as needed' 
+              : 'Complete your profile to enable accurate role matching'
+            }
+          </p>
+          {existingProfileId && (
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              Editing existing profile
+            </div>
+          )}
         </div>
 
-        <label>Primary skill areas (comma)</label>
-        <input value={primarySkills} onChange={e=>setPrimarySkills(e.target.value)} style={{width:'100%'}}/>
-        <label>Secondary skill areas (comma)</label>
-        <input value={secondarySkills} onChange={e=>setSecondarySkills(e.target.value)} style={{width:'100%'}}/>
-        <label>Years of experience per skill (skill:years; skil2:years)</label>
-        <input value={yearsBySkill} onChange={e=>setYearsBySkill(e.target.value)} style={{width:'100%'}}/>
-        <label>Tools/technologies (comma)</label>
-        <input value={tools} onChange={e=>setTools(e.target.value)} style={{width:'100%'}}/>
-        <label>Certifications (comma)</label>
-        <input value={certs} onChange={e=>setCerts(e.target.value)} style={{width:'100%'}}/>
-        <label>Training in progress (Course:percent; ...)</label>
-        <input value={trainingInProgress} onChange={e=>setTrainingInProgress(e.target.value)} style={{width:'100%'}}/>
-
-        <label>Roles you’re interested in (up to 5, comma)</label>
-        <input value={interestedRoles} onChange={e=>setInterestedRoles(e.target.value)} style={{width:'100%'}}/>
-        <label>Roles you do not want (up to 3, comma)</label>
-        <input value={avoidRoles} onChange={e=>setAvoidRoles(e.target.value)} style={{width:'100%'}}/>
-
-        <div style={{display:'flex', gap:16}}>
-          <label>Preference: technical vs. leadership (1–5) <input type="number" min={1} max={5} value={prefTechLeadership} onChange={e=>setPrefTechLeadership(Number(e.target.value))}/></label>
-          <label>Preference: ops vs. training (1–5) <input type="number" min={1} max={5} value={prefOpsTraining} onChange={e=>setPrefOpsTraining(Number(e.target.value))}/></label>
-        </div>
-
-        <div style={{display:'flex', gap:16}}>
-          <label>Willing to move units (PCS)
-            <select value={willingPCS} onChange={e=>setWillingPCS(e.target.value as any)}>
-              <option>Yes</option>
-              <option>No</option>
-              <option>Later</option>
-            </select>
-          </label>
-          <label>Willing to cross-career-field
-            <select value={willingCrossCF} onChange={e=>setWillingCrossCF(e.target.value as any)}>
-              <option>Yes</option>
-              <option>No</option>
-            </select>
-          </label>
-          <label>Clearance level
-            <select value={clearance} onChange={e=>setClearance(e.target.value)}>
-              <option>Unclassified</option>
-              <option>Secret</option>
-              <option>Top Secret</option>
-              <option>TS/SCI</option>
-            </select>
-          </label>
-        </div>
-
-        <label>Time constraints (free text)</label>
-        <input value={timeConstraints} onChange={e=>setTimeConstraints(e.target.value)} style={{width:'100%'}}/>
-
-        <label>Learning goals (6–12 months)</label>
-        <textarea value={learningGoals} onChange={e=>setLearningGoals(e.target.value)} rows={3} style={{width:'100%'}}/>
-
-        <div>
-          <div>Courses you want to take (multi-select)</div>
-          <div style={{display:'grid', gap:4, maxHeight:180, overflow:'auto', border:'1px solid #ccc', padding:8}}>
-            {courses.map(c => (
-              <label key={c.id} style={{display:'flex', gap:8, alignItems:'center'}}>
-                <input type="checkbox" checked={selectedCourses.includes(c.id)} onChange={()=>toggleCourse(c.id)} />
-                <span>{c.provider}: {c.title}</span>
-              </label>
+        {/* Progress Bar */}
+        <div className="relative">
+          <div className="flex justify-between items-center mb-4">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex flex-col items-center space-y-2 relative">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
+                  index <= currentStep 
+                    ? 'bg-violet-600 border-violet-600 text-white' 
+                    : 'bg-white border-slate-300 text-slate-400'
+                }`}>
+                  {step.icon}
+                </div>
+                <div className="text-center">
+                  <div className={`text-sm font-medium ${index <= currentStep ? 'text-violet-600' : 'text-slate-400'}`}>
+                    {step.title}
+                  </div>
+                  <div className="text-xs text-slate-500 hidden sm:block">{step.description}</div>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`absolute top-6 left-12 w-full h-0.5 -z-10 ${
+                    index < currentStep ? 'bg-violet-600' : 'bg-slate-300'
+                  }`} style={{ width: 'calc(100vw / 4 - 3rem)' }} />
+                )}
+              </div>
             ))}
           </div>
         </div>
 
-        <label>Anything else MOSaic should consider?</label>
-        <textarea value={freeText} onChange={e=>setFreeText(e.target.value)} rows={4} style={{width:'100%'}}/>
+        {/* Form Content */}
+        <Card className="p-8">
+          {currentStep === 0 && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold">Personal Information</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Full Name *</Label>
+                    <Input value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Last, First M." />
+                  </div>
+                  <div>
+                    <Label>Rank *</Label>
+                    <Select value={rank} onChange={e=>setRank(e.target.value)}>
+                      <option value="">Select rank</option>
+                      <option value="Spc1">Amn</option>
+                      <option value="A1C">A1C</option>
+                      <option value="SrA" >SrA</option>
+                      <option value="SSgt">SSgt</option>
+                      <option value="TSgt">TSgt</option>
+                      <option value="MSgt">MSgt</option>
+                      <option value="SMSgt">SMSgt</option>
+                      <option value="CMSgt">CMSgt</option>
+                      <option value="2Lt">2Lt</option>
+                      <option value="1Lt">1Lt</option>
+                      <option value="Capt">Capt</option>
+                      <option value="Maj">Maj</option>
+                      <option value="Lt Col">Lt Col</option>
+                      <option value="Col">Col</option>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Unit *</Label>
+                    <Select value={unit} onChange={e=>setUnit(e.target.value)}>
+                      <option value="">Select unit</option>
+                      <option value="90 COS">90 COS</option>
+                      <option value="90 COS/Det 1">90 COS/Det 1</option>
+                      <option value="90 COS/Det 2">90 COS/Det 2</option>
+                      <option value="16 AF">16 AF</option>
+                      <option value="24 AF">24 AF</option>
+                      <option value="25 AF">25 AF</option>
+                      <option value="USCYBERCOM">USCYBERCOM</option>
+                      <option value="Other">Other</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Current Duty Position *</Label>
+                    <Input value={dutyPosition} onChange={e=>setDutyPosition(e.target.value)} placeholder="e.g., Cyber Operations Specialist" />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Years of Service</Label>
+                    <Input type="number" value={yearsService} onChange={e=>setYearsService(e.target.value)} placeholder="e.g., 8" min="0" max="40" />
+                  </div>
+                  <div>
+                    <Label>Clearance Level</Label>
+                    <Select value={clearanceLevel} onChange={e=>setClearanceLevel(e.target.value)}>
+                      <option value="">Select clearance</option>
+                      <option value="None">None</option>
+                      <option value="Secret">Secret</option>
+                      <option value="Top Secret">Top Secret</option>
+                      <option value="TS/SCI">TS/SCI</option>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-        <div style={{display:'flex', gap:16, alignItems:'center'}}>
-          <label>Consent to use data <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} /></label>
-          <label>Training readiness % <input type="number" value={trainingReady} onChange={e=>setTrainingReady(Number(e.target.value))}/></label>
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold">Skills & Experience</h3>
+              <div className="space-y-4">
+                <TagInput 
+                  label="Primary Skills *" 
+                  value={primarySkills} 
+                  onChange={setPrimarySkills}
+                  placeholder="Add your main technical skills"
+                />
+                <TagInput 
+                  label="Certifications" 
+                  value={certifications} 
+                  onChange={setCertifications}
+                  placeholder="e.g., Security+, CISSP, CEH"
+                />
+                <TagInput 
+                  label="Specialty Areas" 
+                  value={specialtyAreas} 
+                  onChange={setSpecialtyAreas}
+                  placeholder="e.g., Red Teaming, Digital Forensics, Network Security"
+                />
+                <TagInput 
+                  label="Tools & Technologies" 
+                  value={tools} 
+                  onChange={setTools}
+                  placeholder="e.g., Wireshark, Metasploit, Python"
+                />
+                <Label>Experience Summary
+                  <Textarea 
+                    value={experience} 
+                    onChange={e=>setExperience(e.target.value)}
+                    rows={4}
+                    placeholder="Briefly describe your relevant experience, projects, and accomplishments..."
+                  />
+                </Label>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold">Career Preferences</h3>
+              <div className="space-y-4">
+                <Label>Career Goals *
+                  <Textarea 
+                    value={careerGoals} 
+                    onChange={e=>setCareerGoals(e.target.value)}
+                    rows={3}
+                    placeholder="Describe your short and long-term career objectives..."
+                  />
+                </Label>
+                <TagInput 
+                  label="Preferred Role Types" 
+                  value={preferredRoles} 
+                  onChange={setPreferredRoles}
+                  placeholder="e.g., Technical Lead, Instructor, Analyst"
+                />
+                <TagInput 
+                  label="Roles to Avoid" 
+                  value={avoidRoles} 
+                  onChange={setAvoidRoles}
+                  placeholder="Any roles you prefer not to be considered for"
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Label>Willing to Relocate
+                    <Select value={willingToRelocate} onChange={e=>setWillingToRelocate(e.target.value as any)}>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="Maybe">Maybe</option>
+                    </Select>
+                  </Label>
+                  <Label>Deployment Availability
+                    <Select value={deploymentAvailability} onChange={e=>setDeploymentAvailability(e.target.value as any)}>
+                      <option value="Available">Available</option>
+                      <option value="Limited">Limited</option>
+                      <option value="Not Available">Not Available</option>
+                    </Select>
+                  </Label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold">Additional Information</h3>
+              <div className="space-y-4">
+                <TagInput 
+                  label="Language Skills" 
+                  value={languageSkills} 
+                  onChange={setLanguageSkills}
+                  placeholder="e.g., Spanish (Fluent), French (Basic)"
+                />
+                <Label>Additional Information
+                  <Textarea 
+                    value={additionalInfo} 
+                    onChange={e=>setAdditionalInfo(e.target.value)}
+                    rows={4}
+                    placeholder="Any other relevant information, awards, special qualifications, or notes..."
+                  />
+                </Label>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Navigation */}
+        <div className="flex justify-between items-center">
+          <Button 
+            variant="secondary" 
+            onClick={prevStep}
+            disabled={currentStep === 0}
+          >
+            Previous
+          </Button>
+          
+          <div className="text-sm text-slate-500">
+            Step {currentStep + 1} of {steps.length}
+          </div>
+
+          {currentStep === steps.length - 1 ? (
+            <Button 
+              onClick={handleSubmit}
+              disabled={!isStepValid(currentStep) || isSubmitting}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Profile'}
+            </Button>
+          ) : (
+            <Button 
+              onClick={nextStep}
+              disabled={!isStepValid(currentStep)}
+            >
+              Next
+            </Button>
+          )}
         </div>
-
-        <button onClick={submit} style={{marginTop:12}}>Submit</button>
       </div>
-    </main>
+    </Guard>
   );
 }

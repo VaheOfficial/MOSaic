@@ -7,10 +7,11 @@ from app.core.scoring import score_candidate
 from app.core.optimize import optimize
 from app.models.base import Role, RoleRequirement, SurveyMember
 from app.core.skills import normalize_skills
+from app.core.auth import require_roles
 
 router = APIRouter()
 
-@router.post("/run")
+@router.post("/run", dependencies=[Depends(require_roles("commander"))])
 def run_match(unit: str = Query(...), top_k: int = 3, db: Session = Depends(get_db)):
     # Fetch roles for unit
     roles = db.execute(select(Role).where(Role.unit==unit)).scalars().all()

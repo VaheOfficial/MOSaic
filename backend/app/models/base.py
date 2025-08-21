@@ -44,3 +44,11 @@ class SurveySupervisor(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     role_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     data: Mapped[dict] = mapped_column(JSON)
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True)
+    full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    role: Mapped[str] = mapped_column(String(32))  # member | supervisor | commander
+    hashed_password: Mapped[str] = mapped_column(String(255))

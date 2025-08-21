@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: up down logs seed fmt
+.PHONY: up down logs seed fmt dev dev-d
 
 up:
 	docker compose up --build -d
@@ -17,3 +17,9 @@ seed:
 fmt:
 	black backend/app || true
 	npx prettier -w frontend || true
+
+dev:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+dev-d:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d

@@ -1,0 +1,15 @@
+.env
+node_modules/
+frontend/.next/
+__pycache__/
+.DS_Store
+.vscode/
+.idea/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+.env.local
+cache/
+.next/
+bun.lock

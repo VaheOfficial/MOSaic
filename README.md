@@ -5,7 +5,7 @@ Single-unit AI-powered billet matching (mock data), designed to scale to inter-u
 ## Quick start (Docker)
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 # backend on http://localhost:8000 (docs at /docs)
 # frontend on http://localhost:3000
 ```
@@ -13,6 +13,11 @@ docker compose up --build
 - **backend**: FastAPI + Postgres + SQLAlchemy
 - **frontend**: Next.js (App Router, TypeScript)
 - **db**: Postgres 15
+
+## Dev (Docker, hot reload)
+- Make: `make dev` (or `make dev-d` for detached)
+- PowerShell: `./dev.ps1` (or `./dev.ps1 -Detach`)
+- Bash: `./dev.sh`
 
 ## Dev (no Docker)
 - Backend: `cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload`

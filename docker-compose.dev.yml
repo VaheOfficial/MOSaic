@@ -1,0 +1,23 @@
+services:
+  backend:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - PYTHONUNBUFFERED=1
+      - WATCHFILES_FORCE_POLLING=1
+    volumes:
+      - ./backend:/app
+  frontend:
+    command: sh -c "npm install --no-audit --prefer-offline && npm run dev"
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=1
+      - WATCHPACK_POLLING=true
+      - NEXT_WEBPACK_USEPOLLING=1
+    volumes:
+      - ./frontend:/usr/src/app
+      - frontend_node_modules:/usr/src/app/node_modules
+
+volumes:
+  frontend_node_modules:
+
+

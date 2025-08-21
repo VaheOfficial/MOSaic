@@ -1,0 +1,45 @@
+[
+  {
+    "id": "du-cts-101",
+    "provider": "digitalU",
+    "title": "Intro to Cyber Threat Emulation",
+    "url": "https://example.mil/digitalu/cts-101",
+    "skills": [
+      "red teaming",
+      "recon",
+      "opsec"
+    ]
+  },
+  {
+    "id": "sans-504",
+    "provider": "SANS",
+    "title": "Hacker Tools, Techniques, Exploits, and Incident Handling",
+    "url": "https://www.sans.org/cyber-security-courses/hacker-techniques-exploits-incident-handling/",
+    "skills": [
+      "blue teaming",
+      "threat hunting",
+      "networking"
+    ]
+  },
+  {
+    "id": "offsec-oscp",
+    "provider": "Offensive Security",
+    "title": "OSCP Prep",
+    "url": "https://www.offsec.com/courses/pen-200/",
+    "skills": [
+      "web exploitation",
+      "linux",
+      "python"
+    ]
+  },
+  {
+    "id": "public-mitre-attck",
+    "provider": "Public",
+    "title": "MITRE ATT&CK Defender: Adversary Emulation Basics",
+    "url": "https://attack.mitre.org/",
+    "skills": [
+      "red teaming",
+      "recon"
+    ]
+  }
+]
